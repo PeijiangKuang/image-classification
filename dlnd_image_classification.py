@@ -97,7 +97,7 @@ def normalize(x):
     : return: Numpy array of normalize data
     """
     # TODO: Implement Function
-    return np.array(x / 255.0)
+    return x / 255.0
 
 
 """
@@ -120,6 +120,7 @@ from sklearn.preprocessing import OneHotEncoder
 # In[22]:
 
 
+encoder = OneHotEncoder(n_values = 10)
 def one_hot_encode(x):
     """
     One hot encode a list of sample labels. Return a one-hot encoded vector for each label.
@@ -128,7 +129,6 @@ def one_hot_encode(x):
     """
     # TODO: Implement Function
     x = np.array(x).reshape(-1, 1)
-    encoder = OneHotEncoder(n_values = 10)
     encoder.fit(x)
     return encoder.transform(x).toarray()
 
@@ -159,7 +159,7 @@ helper.preprocess_and_save_data(cifar10_dataset_folder_path, normalize, one_hot_
 # # Check Point
 # This is your first checkpoint.  If you ever decide to come back to this notebook or have to restart the notebook, you can start from here.  The preprocessed data has been saved to disk.
 
-# In[24]:
+# In[2]:
 
 
 """
@@ -206,7 +206,7 @@ valid_features, valid_labels = pickle.load(open('preprocess_validation.p', mode=
 import tensorflow as tf
 
 
-# In[27]:
+# In[3]:
 
 
 import tensorflow as tf
@@ -262,7 +262,7 @@ tests.test_nn_keep_prob_inputs(neural_net_keep_prob_input)
 # 
 # **Note:** You **can't** use [TensorFlow Layers](https://www.tensorflow.org/api_docs/python/tf/layers) or [TensorFlow Layers (contrib)](https://www.tensorflow.org/api_guides/python/contrib.layers) for **this** layer, but you can still use TensorFlow's [Neural Network](https://www.tensorflow.org/api_docs/python/tf/nn) package. You may still use the shortcut option for all the **other** layers.
 
-# In[46]:
+# In[4]:
 
 
 def conv2d_maxpool(x_tensor, conv_num_outputs, conv_ksize, conv_strides, pool_ksize, pool_strides):
@@ -279,11 +279,11 @@ def conv2d_maxpool(x_tensor, conv_num_outputs, conv_ksize, conv_strides, pool_ks
     # TODO: Implement Function
     channels = x_tensor.get_shape().as_list()[3]
     weights_shape = (conv_ksize[0], conv_ksize[1], channels, conv_num_outputs)
-    print(weights_shape)
-    weights = tf.Variable(tf.truncated_normal(shape=weights_shape))
+    weights = tf.Variable(tf.truncated_normal(shape=weights_shape, stddev=0.05))
     biases = tf.Variable(tf.zeros(conv_num_outputs))
     conv = tf.nn.conv2d(x_tensor, weights, strides=(1, conv_strides[0], conv_strides[1], 1), padding='SAME') + biases
-    pool = tf.nn.max_pool(conv, ksize=(1, pool_ksize[0], pool_ksize[1], 1), 
+    activation = tf.nn.relu(conv)
+    pool = tf.nn.max_pool(activation, ksize=(1, pool_ksize[0], pool_ksize[1], 1), 
                           strides=(1, pool_strides[0], pool_strides[1], 1), padding='SAME')
     
     return pool 
@@ -298,9 +298,10 @@ tests.test_con_pool(conv2d_maxpool)
 # ### Flatten Layer
 # Implement the `flatten` function to change the dimension of `x_tensor` from a 4-D tensor to a 2-D tensor.  The output should be the shape (*Batch Size*, *Flattened Image Size*). Shortcut option: you can use classes from the [TensorFlow Layers](https://www.tensorflow.org/api_docs/python/tf/layers) or [TensorFlow Layers (contrib)](https://www.tensorflow.org/api_guides/python/contrib.layers) packages for this layer. For more of a challenge, only use other TensorFlow packages.
 
-# In[54]:
+# In[6]:
 
 
+import numpy as np
 def flatten(x_tensor):
     """
     Flatten x_tensor to (Batch Size, Flattened Image Size)
@@ -322,7 +323,7 @@ tests.test_flatten(flatten)
 # ### Fully-Connected Layer
 # Implement the `fully_conn` function to apply a fully connected layer to `x_tensor` with the shape (*Batch Size*, *num_outputs*). Shortcut option: you can use classes from the [TensorFlow Layers](https://www.tensorflow.org/api_docs/python/tf/layers) or [TensorFlow Layers (contrib)](https://www.tensorflow.org/api_guides/python/contrib.layers) packages for this layer. For more of a challenge, only use other TensorFlow packages.
 
-# In[55]:
+# In[10]:
 
 
 def fully_conn(x_tensor, num_outputs):
@@ -334,9 +335,9 @@ def fully_conn(x_tensor, num_outputs):
     """
     # TODO: Implement Function
     input_nums = x_tensor.get_shape().as_list()[1]
-    weights = tf.Variable(tf.truncated_normal(shape=(input_nums, num_outputs)))
+    weights = tf.Variable(tf.truncated_normal(shape=(input_nums, num_outputs), stddev=0.05))
     biases = tf.Variable(tf.zeros(num_outputs))
-    return tf.matmul(x_tensor, weights) + biases
+    return tf.nn.relu(tf.matmul(x_tensor, weights) + biases)
 
 
 """
@@ -350,7 +351,7 @@ tests.test_fully_conn(fully_conn)
 # 
 # **Note:** Activation, softmax, or cross entropy should **not** be applied to this.
 
-# In[56]:
+# In[12]:
 
 
 def output(x_tensor, num_outputs):
@@ -362,7 +363,7 @@ def output(x_tensor, num_outputs):
     """
     # TODO: Implement Function
     input_nums = x_tensor.get_shape().as_list()[1]
-    weights = tf.Variable(tf.truncated_normal(shape=(input_nums, num_outputs)))
+    weights = tf.Variable(tf.truncated_normal(shape=(input_nums, num_outputs), stddev=0.05))
     biases = tf.Variable(tf.zeros(num_outputs))
     return tf.matmul(x_tensor, weights) + biases
 
@@ -383,7 +384,7 @@ tests.test_output(output)
 # * Return the output
 # * Apply [TensorFlow's Dropout](https://www.tensorflow.org/api_docs/python/tf/nn/dropout) to one or more layers in the model using `keep_prob`. 
 
-# In[80]:
+# In[36]:
 
 
 def conv_net(x, keep_prob):
@@ -398,10 +399,8 @@ def conv_net(x, keep_prob):
     # Function Definition from Above:
     #    conv2d_maxpool(x_tensor, conv_num_outputs, conv_ksize, conv_strides, pool_ksize, pool_strides)
     conv_1 = conv2d_maxpool(x, conv_num_outputs=32, conv_ksize=(5, 5), conv_strides=(1,1), pool_ksize=(2, 2), pool_strides=(2,2))
-    #conv_1 = tf.nn.dropout(conv_1, keep_prob)
     conv_2 = conv2d_maxpool(conv_1, conv_num_outputs=64, conv_ksize=(5, 5), conv_strides=(2,2), pool_ksize=(2, 2), pool_strides=(2,2))
     conv_2 = tf.nn.dropout(conv_2, keep_prob)
-    #conv_3 = conv2d_maxpool(conv_2, conv_num_outputs=128, conv_ksize=(5, 5), conv_strides=(1,1), pool_ksize=(2, 2), pool_strides=(2,2))
     # TODO: Apply a Flatten Layer
     # Function Definition from Above:
     #   flatten(x_tensor)
@@ -413,17 +412,15 @@ def conv_net(x, keep_prob):
     #   fully_conn(x_tensor, num_outputs)
     fc1 = fully_conn(flatten_tensor, 1024)
     fc1 = tf.nn.dropout(fc1, keep_prob)
-    fc2 = fully_conn(fc1, 512)
+    fc2 = fully_conn(fc1, 256)
     fc2 = tf.nn.dropout(fc2, keep_prob)
-    fc3 = fully_conn(fc2, 256)
-    fc3 = tf.nn.dropout(fc3, keep_prob)
     
     
     # TODO: Apply an Output Layer
     #    Set this to the number of classes
     # Function Definition from Above:
     #   output(x_tensor, num_outputs)
-    logits = output(fc1, 10)
+    logits = output(fc2, 10)
     
     # TODO: return output
     return logits
@@ -473,7 +470,7 @@ tests.test_conv_net(conv_net)
 # 
 # Note: Nothing needs to be returned. This function is only optimizing the neural network.
 
-# In[59]:
+# In[14]:
 
 
 def train_neural_network(session, optimizer, keep_probability, feature_batch, label_batch):
@@ -499,7 +496,7 @@ tests.test_train_nn(train_neural_network)
 # ### Show Stats
 # Implement the function `print_stats` to print loss and validation accuracy.  Use the global variables `valid_features` and `valid_labels` to calculate validation accuracy.  Use a keep probability of `1.0` to calculate the loss and validation accuracy.
 
-# In[60]:
+# In[23]:
 
 
 def print_stats(session, feature_batch, label_batch, cost, accuracy):
@@ -513,8 +510,10 @@ def print_stats(session, feature_batch, label_batch, cost, accuracy):
     """
     # TODO: Implement Function
     feed_dict = {x: feature_batch, y: label_batch, keep_prob: 1.0}
-    loss, acc = sess.run([cost, accuracy], feed_dict=feed_dict)
-    print("loss: %.2f\tacc: %.2f" %(loss, acc))
+    train_loss, train_acc = sess.run([cost, accuracy], feed_dict=feed_dict)
+    feed_dict = {x: valid_features, y: valid_labels, keep_prob: 1.0}
+    valid_loss, valid_acc = sess.run([cost, accuracy], feed_dict=feed_dict)
+    print("\n\ttrain loss: %.2f\ttrain accuracy: %.2f\n\tvalidation loss: %.2f\tvalidation accuracy:%.2f" %(train_loss, train_acc, valid_loss, valid_acc))
 
 
 # ### Hyperparameters
@@ -527,19 +526,19 @@ def print_stats(session, feature_batch, label_batch, cost, accuracy):
 #  * ...
 # * Set `keep_probability` to the probability of keeping a node using dropout
 
-# In[81]:
+# In[34]:
 
 
 # TODO: Tune Parameters
-epochs = 30
-batch_size = 64
+epochs = 50
+batch_size = 128
 keep_probability = 0.5
 
 
 # ### Train on a Single CIFAR-10 Batch
 # Instead of training the neural network on all the CIFAR-10 batches of data, let's use a single batch. This should save time while you iterate on the model to get a better accuracy.  Once the final validation accuracy is 50% or greater, run the model on all the data in the next section.
 
-# In[82]:
+# In[37]:
 
 
 """
@@ -557,13 +556,12 @@ with tf.Session() as sess:
             train_neural_network(sess, optimizer, keep_probability, batch_features, batch_labels)
         print('Epoch {:>2}, CIFAR-10 Batch {}:  '.format(epoch + 1, batch_i), end='')
         print_stats(sess, batch_features, batch_labels, cost, accuracy)
-        print_stats(sess, valid_features, valid_labels, cost, accuracy)
 
 
 # ### Fully Train the Model
 # Now that you got a good accuracy with a single CIFAR-10 batch, try it with all five batches.
 
-# In[83]:
+# In[38]:
 
 
 """
@@ -596,7 +594,7 @@ with tf.Session() as sess:
 # ## Test Model
 # Test your model against the test dataset.  This will be your final accuracy. You should have an accuracy greater than 50%. If you don't, keep tweaking the model architecture and parameters.
 
-# In[84]:
+# In[39]:
 
 
 """
